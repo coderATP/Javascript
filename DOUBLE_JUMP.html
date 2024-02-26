@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<style>
+       *{
+       padding: 0;
+       margin: 0;
+       user-select: none;
+       box-sizing: border-box;
+    }
+    #canvas{
+        border: 1px dashed green;
+        position: absolute;
+        max-width: 100%;
+        max-height: 100%;
+    }
+    body{
+        background-color: black;
+    }
+    #up{
+        position: absolute;
+        font-size: 3rem;
+        bottom: 50%;
+        left: 2%;
+        color: white;
+        background: transparent;
+        width: 10%;
+    }
+    #up:hover{
+        color: green;
+        background-color: lightgray;
+    }
+    
+</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Double Jump</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<canvas id = 'canvas'></canvas>
+<button id = 'up'> J</button>
+
+<script src="script.js"></script>
+<script>
+    window.addEventListener('load', ()=>{
+    //nxjskkskjsggsggßhnsmkskskskksjsjshshsjsjsjjsjsjsjsjjsjsjsjshhshshshshhsnsjsjshshshshhsbshshshshshshshshbzbsjsjjshshshshhshshshshvbb
+   // const canvas = document.querySelector('#canvas');
+    
+    class Game{
+        constructor(canvas){
+            this.canvas = canvas;
+            this.width = this.canvas.width;
+            this.height = this.canvas.height;
+            
+            //input
+            this.keys = [];
+            this.keypressed = false;
+            
+            const btns = document.querySelectorAll('button');
+            btns.forEach(btn => {
+                btn.addEventListener('touchstart', (e) => {
+                    const key = e.target.id;
+                    if (this.keys.indexOf(key) < 0) {
+                        this.keys.push(key);
+                        this.keypressed = true;
+                    }
+                })
+                btn.addEventListener('touchend', (e) => {
+                    const key = e.target.id;
+                    if (this.keys.indexOf(key) > -1) {
+                        this.keys.splice(this.keys.indexOf(key), 1);
+                        this.keypressed = false;
+                    }
+                })
+            })
+            
+            this.player = new Player(this);
+        }
+        
+        render(ctx){
+            this.player.draw(ctx);
+            
+            this.drawStatusText(ctx);
+        }
+        
+        update(deltaTime){
+            this.player.update(deltaTime);
+        }
+        drawStatusText(ctx){
+            ctx.textAlign = 'center'
+            ctx.textBaseline = 'middle'
+            ctx.fillStyle = 'gold'
+            ctx.font = '20px Helvetica';
+            ctx.fillText("JAVASCRIPT CODE TO DOUBLE-JUMP", this.width*0.5, 20);
+            ctx.font = '10px Serif'
+            ctx.fillStyle = 'white'
+            ctx.fillText("Press 'J' to jump. Press twice to double-jump", this.width*0.5, 40);
+            ctx.fillStyle = 'green'
+            ctx.fillText("Press 'J' to jump. Press twice to double-jump", (this.width*0.5)+1, 41);
+
+        }
+    }
+    
+    class Player{
+        constructor(game){
+            this.game = game;
+            this.width = 20;
+            this.height = 20;
+            this.x = 200;
+            this.y = 100;
+            this.color = 'gold';
+            this.speedX = 0
+            this.speedY = 0
+            this.gravity = 1;
+            this.maxJump = 2;
+        }
+        draw(ctx){
+            ctx.fillStyle = this.color;
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+        }
+        
+        update(deltaTime){
+            this.x += this.speedX;
+            this.applyGravity();
+            this.handleInput();
+            
+            if (this.onGround() ) {
+                this.maxJump = 2;
+                this.y = this.game.height - this.height;
+            } 
+        }
+        onGround(){
+            return(this.y + this.height > this.game.height)
+        }
+        applyGravity(){
+            this.speedY+= this.gravity;
+            this.y+= this.speedY;
+        }
+        
+        handleInput(){
+            if(this.game.keys.indexOf('up') > -1 && this.game.keypressed && this.maxJump > 1){
+                this.speedY = -20;
+                this.maxJump--;
+                this.game.keypressed = false;
+            }
+        }
+    }
+    
+    canvas.width = innerWidth;
+    canvas.height = innerHeight;
+    const ctx = canvas.getContext('2d');
+    
+    const game = new Game(canvas);
+    function loop(timestamp){
+        ctx.clearRect(0,0, canvas.width, canvas.height)
+       
+        game.render(ctx);
+        
+        game.update(0);
+        
+        requestAnimationFrame(loop);
+    }
+    loop(0);
+})
+
+  
+</script>
+</body>
+
+</html>
