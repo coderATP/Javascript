@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        *{
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+    user-select: none;
+}
+button{
+    position: absolute;
+    font-size: 1.2rem;
+    top: 0;
+    background: transparent;
+    color: white;
+}
+button:hover{
+    color: green;
+}
+
+canvas{
+    position: absolute;
+    background-color: black;
+    max-width: 100%;
+    max-height: 100%;
+} 
+    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Joystick Controller</title>
+    <link rel="manifest" href="manifest.json" />
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+<canvas id = 'canvas'></canvas>
+
+<button id = 'fullscreen'>Fullscreen</button>
+<script src="player.js"></script>
+<script src="joystick.js"></script>
+
+<script src="game.js"></script>
+<script src="script.js"></script>
+
+<script>
+    //zgzvzggzvvzvzhzhsueueuuegcevskskksbsvvshshhsvvsvsgsvvvsbsssg
+
+window.addEventListener('load', ()=>{
+   
+    class Game{
+        constructor(canvas){
+            this.canvas = canvas;
+            this.width = this.canvas.width;
+            this.height = this.canvas.height;
+            
+            this.joystick = new Joystick(this);
+            this.mouse = {x: 0, y: 0};
+            this.touch = ''
+      
+            this.player = new Player(this);
+            
+            //can the player move
+            this.canMove = false;
+            this.canDrawJoystick = false;
+            
+            //input
+            window.addEventListener('touchstart', (e)=>{
+               this.mouse.x= e.changedTouches[0].clientX;
+               this.mouse.y = e.changedTouches[0].clientY;
+               this.canMove = true;
+               this.canDrawJoystick = true;
+            })
+            window.addEventListener('touchmove', (e)=>{
+               this.mouse.x = e.changedTouches[0].clientX;
+               this.mouse.y = e.changedTouches[0].clientY;
+               this.canMove = true;
+               this.canDrawJoystick = true;
+            })
+            window.addEventListener('touchend', (e)=>{
+                this.canMove  = false;
+                this.canDrawJoystick = false;
+            })
+            fullscreen.addEventListener('click', ()=>{
+                this.toggleFullscreen()
+            })
+       
+        }
+        
+        render(ctx){
+            this.joystick.draw(ctx);
+            this.player.draw(ctx);
+            this.drawStatusText(ctx);
+        }
+        
+        update(deltaTime){
+            this.joystick.update(deltaTime);
+            this.player.update();
+        }
+        
+        calcAim(a, b){
+            const dx = a.x - b.x;
+            const dy = a.y - b.y;
+            const dz = Math.hypot(dx, dy);
+            const cosineTheta = dx/dz;
+            const sineTheta = dy/dx;
+            const angle = Math.atan2(dy, dx);
+            const aim = {
+                'dx': dx, 
+                'dy': dy, 
+                'dz': dz, 
+                'cosineTheta': cosineTheta, 
+                'sineTheta': sineTheta, 
+                'angle': angle
+            }
+            return aim;
+        }
+        
+        rectangularCollision(a, b){
+            return(
+                a.x < b.x + b.width &&
+                a.x + a.width > b.x &&
+                a.y < b.y + b.height &&
+                a.y + a.height > b.y
+               ) 
+        }
+        
+        pointCircleCollision(point, circle){
+            return(point.x > circle.x - 2* circle.radius &&
+                   point.x < circle.x + 2* circle.radius &&
+                   point.y > circle.y - 2* circle.radius &&
+                   point.y < circle.y + 2* circle.radius
+                   );
+        }
+        
+        drawStatusText(ctx){
+            ctx.textAlign = 'center'
+            ctx.textBaseline = 'middle'
+            ctx.fillStyle = 'gold'
+            ctx.font = '20px Helvetica';
+            ctx.fillText("CREATING DIGITAL JOYSTICK", this.width * 0.5, 40)
+            ctx.font = '10px Helvetica'
+            ctx.fillStyle = 'white'
+            ctx.fillText("Press the lower-left corner of the screen to move player", this.width*0.5, 60);
+            ctx.fillStyle = 'green'
+            ctx.fillText("Press the lower-left corner of the screen to move player", (this.width*0.5)+1, 61);
+
+        }
+        toggleFullscreen(){
+        if(!document.fullscreenElement){
+            document.documentElement.requestFullscreen();
+        }else if(document.exitFullscreen){
+            document.exitFullscreen();
+        }
+    }
+    
+    }
+    
+    class Player{
+    constructor(game) {
+        this.game = game;
+        this.width = 100;
+        this.height = 30;
+        this.radius = 30;
+        this.x = this.game.width * 0.5 - this.width * 0.5;
+        this.y = this.game.height * 0.5 - this.height;
+        this.speedY = 0;
+        this.speedX = 0;
+        this.speedModifier = 4;
+        this.color = 'white'
+        this.image = document.getElementById('paddleImage');
+        this.score = 0
+        this.aim = undefined;
+        this.angle = 0;
+    }
+    draw(ctx) {
+        ctx.save()
+        ctx.translate(this.x + this.width * 0.5, this.y + this.height * 0.5);
+        if(this.game.pointCircleCollision(this.game.mouse, this.game.joystick)) ctx.rotate(this.angle)
+        ctx.fillStyle = this.color
+        ctx.fillRect(-this.width * 0.5, -this.height * 0.5, this.width, this.height);
+        
+        ctx.strokeStyle = 'gold'
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius, 0, Math.PI *2);
+        ctx.stroke();
+        ctx.closePath();
+        ctx.restore();
+    }
+
+    update() {
+        this.x += this.speedX * this.speedModifier;
+        this.y += this.speedY * this.speedModifier;
+        this.aim = this.game.calcAim(this.game.mouse, this.game.joystick);
+        this.angle = this.aim.angle;
+        
+        if(this.game.canMove && this.game.pointCircleCollision(this.game.mouse, this.game.joystick)){
+            this.speedX = Math.cos(this.angle);
+            this.speedY = Math.sin(this.angle);
+        }
+        else{
+            this.speedX = this.speedY = 0;
+        }
+    } 
+    
+    restart() {
+        this.x = this.game.width * 0.5 - this.width * 0.5;
+        this.y = this.game.height - this.height;
+    }
+}
+    
+    class Joystick{
+    constructor(game){
+        this.game = game;
+        this.width = 80;
+        this.height = 80;
+        this.radius = 40;
+        this.x = 1.5 * this.radius;
+        this.y = this.game.height - 1.5 * this.radius;
+        this.initialX = this.x;
+        this.initialY = this.y;
+        this.kRadius = 15;
+        this.color = 'white';
+        this.cosineTheta  = 0;
+        this.sineTheta = 0;
+    }
+    draw(ctx){
+        if(!this.game.canDrawJoystick) return
+        ctx.strokeStyle = this.color
+        ctx.lineWidth = 5;
+        ctx.beginPath()
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI *2);
+        ctx.stroke()
+        ctx.closePath();
+        
+        ctx.fillStyle = 'gold';
+        //innermost shell
+        ctx.beginPath();
+        ctx.arc(this.x + this.cosineTheta * (this.radius), this.y + this.sineTheta * (this.radius), this.kRadius, 0, Math.PI *2);
+        ctx.fill()
+        ctx.closePath();
+        
+    }
+    update(deltaTime){
+        const dx = this.game.mouse.x- this.x;
+        const dy = this.game.mouse.y- this.y;
+        const distance = Math.hypot(dx, dy);
+        
+        this.cosineTheta = dx/distance;
+        this.sineTheta = dy/distance;
+        this.angle = Math.atan2(dy, dx);
+    }
+}
+
+    canvas.width = innerWidth;
+    canvas.height = innerHeight;
+    const ctx = canvas.getContext('2d');
+    
+    window.addEventListener('resize', (e)=>{
+        canvas.width = e.target.innerWidth;
+        canvas.height = e.target.innerHeight;
+    })
+    const game = new Game(canvas);
+    function loop(timestamp){
+        ctx.clearRect(0,0, canvas.width, canvas.height);
+        
+        game.render(ctx);
+        
+        game.drawStatusText(ctx);
+        
+        game.update(0);
+        
+        requestAnimationFrame(loop)
+    }
+    loop(0)
+}) 
+</script>
+</body>
+
+</html>
